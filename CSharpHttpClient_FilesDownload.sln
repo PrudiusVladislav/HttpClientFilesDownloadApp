@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpAspNetCore_Server", "CSharpAspNetCore_Server\CSharpAspNetCore_Server.csproj", "{6A480692-FD88-4442-B635-864F44F26B8F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpWPF_Client", "CSharpWPF_Client\CSharpWPF_Client.csproj", "{9BFE7207-E29C-42A1-B692-EC3E96E0D1EF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6A480692-FD88-4442-B635-864F44F26B8F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A480692-FD88-4442-B635-864F44F26B8F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A480692-FD88-4442-B635-864F44F26B8F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A480692-FD88-4442-B635-864F44F26B8F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9BFE7207-E29C-42A1-B692-EC3E96E0D1EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9BFE7207-E29C-42A1-B692-EC3E96E0D1EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9BFE7207-E29C-42A1-B692-EC3E96E0D1EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9BFE7207-E29C-42A1-B692-EC3E96E0D1EF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
