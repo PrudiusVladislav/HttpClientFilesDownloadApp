@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CSharpWPF_Client.ClientLogic;
@@ -46,13 +47,14 @@ public class FileDownloadClient
 
     private long GetContentLength()
     {
-        var request = new HttpRequestMessage(HttpMethod.Head, _source);
+        // var request = new HttpRequestMessage(HttpMethod.Head, _source);
+        //
+        // using var response = _httpClient.SendAsync(request).Result;
 
-        using var response = _httpClient.SendAsync(request).Result;
+        var response = _httpClient.GetAsync(_source).Result;
         
-        
-        //return int.Parse(response.Content.Headers.First(h => h.Key.Equals("Content-Length")).Value.First());
-        return response.Content.Headers.ContentLength ?? 0;
+        return int.Parse(response.Content.Headers.FirstOrDefault(h => h.Key.Equals("Content-Length")).Value.First());
+        //return response.Content.Headers.ContentLength ?? 0;
     }
     
     public async Task<FileDownloadResult> StartDownloadAsync()
@@ -65,6 +67,8 @@ public class FileDownloadClient
         await using var fs = new FileStream(SavePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
         var buffer = new byte[_chunkSize];
         Console.WriteLine($"ContentLength: {ContentLength}");
+        //counter, to make the download freeze for only specified number of times
+        var sleepTestCounter = 0;
         while (!_stopped && _bytesWritten < ContentLength)
         {
             if (_paused)
@@ -79,6 +83,12 @@ public class FileDownloadClient
 
             await fs.WriteAsync(buffer, 0, bytesRead);
             _bytesWritten += bytesRead;
+            //simulating some work/download process being done so we would able to test how pause/resume and stop methods work
+            if (_bytesWritten >= ContentLength / 2 && sleepTestCounter < 1)
+            {
+                await Task.Delay(2000);
+                sleepTestCounter++;
+            }
         }
         await fs.FlushAsync();
 
