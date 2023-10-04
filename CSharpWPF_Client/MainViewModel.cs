@@ -18,9 +18,9 @@ public class MainViewModel : ObservableObject
     private FileDownloadClient _currentDownloadClient;
     private readonly Client _client = new Client();
     
-    public ObservableCollection<string> DownloadedFiles { get; set; } = new();
-    public ObservableCollection<string> CanceledDownloads { get; set; } = new();
-    public ObservableCollection<string> CurrentDownloads { get; set; } = new();
+    public ObservableCollection<FileDownloadClient> DownloadedFiles { get; set; } = new();
+    public ObservableCollection<FileDownloadClient> CanceledDownloads { get; set; } = new();
+    public ObservableCollection<FileDownloadClient> CurrentDownloads { get; set; } = new();
     
     
     public ICommand DownloadCommand { get; set; }
@@ -41,7 +41,7 @@ public class MainViewModel : ObservableObject
     public string PauseResumeButtonText
     {
         get => _pauseResumeButtonText;
-        set
+        private set
         {
             _pauseResumeButtonText = value;
             OnPropertyChanged();
@@ -73,18 +73,18 @@ public class MainViewModel : ObservableObject
         DownloadCommand = new RelayCommand((action) =>
         {
             ExecuteDownloadCommand();
-        }, o => !(string.IsNullOrWhiteSpace(DownloadFileName) || string.IsNullOrWhiteSpace(SavePath) || !Directory.Exists(SavePath)));
+        }, o => !(string.IsNullOrWhiteSpace(DownloadFileName) || string.IsNullOrWhiteSpace(SavePath) || !Directory.Exists(SavePath) || CurrentDownloads.Count > 0));
         SelectSavePathCommand = new RelayCommand((action) =>
         {
             ExecuteSelectSavePathCommand();
-        }, o => true);
+        }, o => CurrentDownloads.Count == 0);
         PauseResumeCommand = new RelayCommand((action) =>
         {
             ExecutePauseResumeCommand();
         }, o => CurrentDownloads.Count > 0);
         StopDownloadCommand = new RelayCommand((action) =>
         {
-            _currentDownloadClient.Stop();
+            _currentDownloadClient!.Stop();
         }, o => CurrentDownloads.Count > 0);
     }
     
@@ -107,28 +107,27 @@ public class MainViewModel : ObservableObject
 
         _currentDownloadClient =  new FileDownloadClient(_client.HttpClient, DownloadFileName, fullSavePath, 4096);
         var downloadTask = _currentDownloadClient.StartDownloadAsync();
-        var downloadName = System.IO.Path.GetFileName(_currentDownloadClient.SavePath);
-        CurrentDownloads.Add(downloadName);
+        CurrentDownloads.Add(_currentDownloadClient);
         var result = await downloadTask;
-        CurrentDownloads.Remove(downloadName);
+        CurrentDownloads.Remove(_currentDownloadClient);
         switch (result)
         {
             case FileDownloadResult.SuccessfulDownload:
             {
-                DownloadedFiles.Add(downloadName);
+                DownloadedFiles.Add(_currentDownloadClient);
                 break;
             }
             case FileDownloadResult.FileNotFound:
             {
-                CanceledDownloads.Add(downloadName);
-                MessageBox.Show($"Downloading of the file {downloadName} has been terminated: no file with such name is available for downloading",
+                CanceledDownloads.Add(_currentDownloadClient);
+                MessageBox.Show($"Downloading of the file {_currentDownloadClient.FileName} has been terminated: no file with such name is available for downloading",
                     "Download terminated", MessageBoxButton.OK, MessageBoxImage.Error);
                 break;
             }
             case FileDownloadResult.StoppedDownload:
             {
-                CanceledDownloads.Add(downloadName);
-                MessageBox.Show($"Downloading of the file {downloadName} has been terminated: operation was cancelled by user",
+                CanceledDownloads.Add(_currentDownloadClient);
+                MessageBox.Show($"Downloading of the file {_currentDownloadClient.FileName} has been terminated: operation was cancelled by user",
                     "Download terminated", MessageBoxButton.OK, MessageBoxImage.Exclamation);
                 break;
             }

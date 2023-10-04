@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -9,7 +10,6 @@ public class FileDownloadClient
 {
     private readonly HttpClient _httpClient;
     private readonly string _source;
-    public string SavePath { get; }
     private readonly int _chunkSize;
     private volatile bool _paused;
     private volatile bool _stopped;
@@ -24,13 +24,16 @@ public class FileDownloadClient
             return _stopped ? FileDownloadState.Stopped : FileDownloadState.Running;
         }
     }
-
+    
+    public string SavePath { get; }
+    public string FileName { get; }
     public int ContentLength { get; private set; }
     public bool IsDone => ContentLength == _bytesWritten;
 
     public FileDownloadClient(HttpClient httpClient, string fileName, string savePath, int chunkSize)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        FileName = fileName;
         _source = $"api/files/{fileName}";
         SavePath = savePath;
         _chunkSize = chunkSize;
@@ -46,6 +49,9 @@ public class FileDownloadClient
         var request = new HttpRequestMessage(HttpMethod.Head, _source);
 
         using var response = _httpClient.SendAsync(request).Result;
+        
+        
+        //return int.Parse(response.Content.Headers.First(h => h.Key.Equals("Content-Length")).Value.First());
         return response.Content.Headers.ContentLength ?? 0;
     }
     
@@ -58,7 +64,7 @@ public class FileDownloadClient
         await using var responseStream = await response.Content.ReadAsStreamAsync();
         await using var fs = new FileStream(SavePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
         var buffer = new byte[_chunkSize];
-
+        Console.WriteLine($"ContentLength: {ContentLength}");
         while (!_stopped && _bytesWritten < ContentLength)
         {
             if (_paused)

@@ -105,11 +105,14 @@
                 <Label Grid.Row="0" Grid.Column="2" Content="Current:" 
                        FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"></Label>
                 <ListBox Grid.Column="0" Grid.Row="1" Margin="10 5"
-                         FontSize="20" ItemsSource="{Binding DownloadedFiles}"></ListBox>
+                         FontSize="20" ItemsSource="{Binding DownloadedFiles}"
+                         DisplayMemberPath="FileName"></ListBox>
                 <ListBox Grid.Column="1" Grid.Row="1" Margin="10 5"
-                         FontSize="20" ItemsSource="{Binding CanceledDownloads}"></ListBox>
+                         FontSize="20" ItemsSource="{Binding CanceledDownloads}"
+                         DisplayMemberPath="FileName"></ListBox>
                 <ListBox Grid.Column="2" Grid.Row="1" Margin="10 5"
-                         FontSize="20" ItemsSource="{Binding CurrentDownloads}"></ListBox>
+                         FontSize="20" ItemsSource="{Binding CurrentDownloads}"
+                         DisplayMemberPath="FileName"></ListBox>
             </Grid>
         </Grid>
     </Grid>
