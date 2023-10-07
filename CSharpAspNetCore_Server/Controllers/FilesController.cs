@@ -10,8 +10,10 @@ public class FilesController: Controller
         : base(logger)
     {
     }
-
+    
+    //[AcceptVerbs(new[] {"GET", "HEAD"})]
     [HttpGet("{fileName}")]
+    [HttpHead("{fileName}")]
     public IActionResult DownloadFile(string fileName)
     {
         var filePath = Path.Combine(_sourceDirPath, fileName);

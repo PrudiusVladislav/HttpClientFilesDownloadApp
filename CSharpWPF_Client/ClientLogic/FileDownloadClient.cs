@@ -14,6 +14,7 @@ public class FileDownloadClient
     private readonly int _chunkSize;
     private volatile bool _paused;
     private volatile bool _stopped;
+    private volatile bool _downloadEnded;
     private int _bytesWritten;
 
     public FileDownloadState DownloadState
@@ -29,7 +30,6 @@ public class FileDownloadClient
     public string SavePath { get; }
     public string FileName { get; }
     public int ContentLength { get; private set; }
-    public bool IsDone => ContentLength == _bytesWritten;
 
     public FileDownloadClient(HttpClient httpClient, string fileName, string savePath, int chunkSize)
     {
@@ -40,6 +40,7 @@ public class FileDownloadClient
         _chunkSize = chunkSize;
         _paused = false;
         _stopped = false;
+        _downloadEnded = true;        
         
         ContentLength = Convert.ToInt32(GetContentLength());
         _bytesWritten = 0;
@@ -47,18 +48,13 @@ public class FileDownloadClient
 
     private long GetContentLength()
     {
-        // var request = new HttpRequestMessage(HttpMethod.Head, _source);
-        //
-        // using var response = _httpClient.SendAsync(request).Result;
-
-        var response = _httpClient.GetAsync(_source).Result;
-        
+        var response = _httpClient.Send(new HttpRequestMessage(HttpMethod.Head, _source));
         return int.Parse(response.Content.Headers.FirstOrDefault(h => h.Key.Equals("Content-Length")).Value.First());
-        //return response.Content.Headers.ContentLength ?? 0;
     }
     
     public async Task<FileDownloadResult> StartDownloadAsync()
     {
+        _downloadEnded = false;
         var response = await _httpClient.GetAsync(_source);
 
         if (!response.IsSuccessStatusCode)
@@ -91,23 +87,32 @@ public class FileDownloadClient
             }
         }
         await fs.FlushAsync();
-
+        _downloadEnded = true;
         return _stopped ? FileDownloadResult.StoppedDownload : FileDownloadResult.SuccessfulDownload;
     }
 
     public void Pause()
     {
-        _paused = true;
+        if(!_downloadEnded)
+            _paused = true;
     }
 
     public void Resume()
     {
-        _paused = false;
+        if(!_downloadEnded)
+            _paused = false;
     }
     
-    public void Stop()
+    public async Task Stop()
     {
         _stopped = true;
+        
+        //wait until StartDownloadAsync ends the iteration it is currently on and disposes the FileStream that uses the file at the end of save path,
+        //so we can access it to delete it
+        while (!_downloadEnded)
+        {
+           await Task.Delay(100);
+        }
         if (File.Exists(SavePath))
         {
             File.Delete(SavePath);
