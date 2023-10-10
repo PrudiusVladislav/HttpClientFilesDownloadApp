@@ -6,17 +6,10 @@
         xmlns:local="clr-namespace:CSharpWPF_Client"
         xmlns:infrastructure="clr-namespace:CSharpWPF_Client.Infrastructure"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="700">
+        Title="MainWindow" Height="450" Width="750" x:Name="mainWindow">
     <Window.DataContext>
         <local:MainViewModel/>
     </Window.DataContext>
-    <Window.Resources>
-        <ObjectDataProvider x:Key="OptionsEnum" MethodName="GetValues" ObjectType="{x:Type infrastructure:FileCommand}">
-            <ObjectDataProvider.MethodParameters>
-                <x:Type TypeName="infrastructure:FileCommand" />
-            </ObjectDataProvider.MethodParameters>
-        </ObjectDataProvider>
-    </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition ></RowDefinition>
@@ -71,49 +64,52 @@
         <Grid Grid.Row="1">
             <Grid.RowDefinitions>
                 <RowDefinition></RowDefinition>
-                <RowDefinition Height="3*"></RowDefinition>
+                <RowDefinition Height="4*"></RowDefinition>
             </Grid.RowDefinitions>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition></ColumnDefinition>
-                    <ColumnDefinition Width="1.2*"></ColumnDefinition>
-                    <ColumnDefinition></ColumnDefinition>
-                </Grid.ColumnDefinitions>
-                <Label Content="Choose command: " FontSize="22"
-                       VerticalAlignment="Center" Margin="5 0 0 0"></Label>
-                <ComboBox Grid.Column="1" Margin="0 10" FontSize="22"
-                          ItemsSource="{Binding Source={StaticResource OptionsEnum}}"
-                          SelectedItem="{Binding SelectedFileCommandOption, UpdateSourceTrigger=PropertyChanged}"
-                          ></ComboBox>
-                <Button Grid.Column="2" Content="Execute" Margin="25 5"
-                        FontSize="22" Command="{Binding ExecuteFileOptionCommand}"></Button>
-            </Grid>
-            <Grid Grid.Row="1">
-                <Grid.RowDefinitions>
-                    <RowDefinition></RowDefinition>
-                    <RowDefinition Height="4*"></RowDefinition>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition></ColumnDefinition>
-                    <ColumnDefinition></ColumnDefinition>
-                    <ColumnDefinition></ColumnDefinition>
-                </Grid.ColumnDefinitions>
-                <Label Content="Downloaded:" 
-                       FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"></Label>
-                <Label Grid.Row="0" Grid.Column="1" Content="Canceled:" 
-                       FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"></Label>
-                <Label Grid.Row="0" Grid.Column="2" Content="Current:" 
-                       FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"></Label>
-                <ListBox Grid.Column="0" Grid.Row="1" Margin="10 5"
-                         FontSize="20" ItemsSource="{Binding DownloadedFiles}"
-                         DisplayMemberPath="FileName"></ListBox>
-                <ListBox Grid.Column="1" Grid.Row="1" Margin="10 5"
-                         FontSize="20" ItemsSource="{Binding CanceledDownloads}"
-                         DisplayMemberPath="FileName"></ListBox>
-                <ListBox Grid.Column="2" Grid.Row="1" Margin="10 5"
-                         FontSize="20" ItemsSource="{Binding CurrentDownloads}"
-                         DisplayMemberPath="FileName"></ListBox>
-            </Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition></ColumnDefinition>
+                <ColumnDefinition></ColumnDefinition>
+                <ColumnDefinition></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <Label Content="Downloaded:" 
+                   FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"></Label>
+            <Label Grid.Row="0" Grid.Column="1" Content="Canceled:" 
+                   FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"></Label>
+            <Label Grid.Row="0" Grid.Column="2" Content="Current:" 
+                   FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"></Label>
+            <ListBox Grid.Column="0" Grid.Row="1" Margin="10 5"
+                     FontSize="20" ItemsSource="{Binding DownloadedFiles}"
+                     Tag="{Binding DataContext, ElementName=mainWindow}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding DownloadedFileName}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <!-- <MenuItem Header="Rename" Command="{Binding Path=DataContext.RenameFileCommand, ElementName=mainWindow}" -->
+                        <!--           CommandParameter="{Binding}" /> -->
+                        <MenuItem Header="Rename" Command="{Binding PlacementTarget.Tag.RenameFileCommand,
+                            RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem,
+                                RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                        <MenuItem Header="Delete" Command="{Binding DeleteFileCommand}" 
+                                  CommandParameter="{Binding Path=SelectedItem, 
+                                  RelativeSource={RelativeSource FindAncestor, 
+                                  AncestorType={x:Type ListBox}}}" />
+                        <MenuItem Header="Relocate" Command="{Binding RelocateFileCommand}" 
+                                  CommandParameter="{Binding Path=SelectedItem, 
+                                  RelativeSource={RelativeSource FindAncestor, 
+                                  AncestorType={x:Type ListBox}}}" />
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+            </ListBox>
+            <ListBox Grid.Column="1" Grid.Row="1" Margin="10 5"
+                     FontSize="20" ItemsSource="{Binding CanceledDownloads}"
+                     DisplayMemberPath="DownloadedFileName"></ListBox>
+            <ListBox Grid.Column="2" Grid.Row="1" Margin="10 5"
+                     FontSize="20" ItemsSource="{Binding CurrentDownloads}"
+                     DisplayMemberPath="DownloadedFileName"></ListBox>
         </Grid>
     </Grid>
 </Window>

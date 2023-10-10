@@ -1,11 +1,14 @@
+using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Shapes;
 using CSharpWPF_Client.Infrastructure;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using CSharpWPF_Client.ClientLogic;
+using Path = System.IO.Path;
 
 namespace CSharpWPF_Client;
 
@@ -14,7 +17,6 @@ public class MainViewModel : ObservableObject
     private string _downloadFileName;
     private string _pauseResumeButtonText;
     private string _savePath;
-    private FileCommand _selectedFileCommandOption;
     private FileDownloadClient _currentDownloadClient;
     private readonly Client _client = new Client();
     
@@ -26,8 +28,10 @@ public class MainViewModel : ObservableObject
     public ICommand DownloadCommand { get; set; }
     public ICommand PauseResumeCommand { get; set; }
     public ICommand StopDownloadCommand { get; set; }
-    public ICommand ExecuteFileOptionCommand { get; set; }
     public ICommand SelectSavePathCommand { get; set; }
+    public ICommand RenameFileCommand { get; set; }
+    public ICommand DeleteFileCommand { get; set; }
+    public ICommand RelocateFileCommand { get; set; }
     
     public string DownloadFileName
     {
@@ -56,15 +60,6 @@ public class MainViewModel : ObservableObject
             OnPropertyChanged();
         }
     }
-    public FileCommand SelectedFileCommandOption
-    {
-        get => _selectedFileCommandOption;
-        set
-        {
-            _selectedFileCommandOption = value;
-            OnPropertyChanged();
-        }
-    }
 
     public MainViewModel()
     {
@@ -84,8 +79,9 @@ public class MainViewModel : ObservableObject
         }, o => CurrentDownloads.Count > 0);
         StopDownloadCommand = new RelayCommand((action) =>
         {
-            _currentDownloadClient!.Stop();
+            ExecuteStopDownloadCommand();
         }, o => CurrentDownloads.Count > 0);
+        RenameFileCommand = new RelayCommand(ExecuteRenameFileCommand, o => true);
     }
     
     
@@ -105,32 +101,39 @@ public class MainViewModel : ObservableObject
             }
         }
 
-        _currentDownloadClient =  new FileDownloadClient(_client.HttpClient, DownloadFileName, fullSavePath, 4096);
-        var downloadTask = _currentDownloadClient.StartDownloadAsync();
-        CurrentDownloads.Add(_currentDownloadClient);
-        var result = await downloadTask;
-        CurrentDownloads.Remove(_currentDownloadClient);
-        switch (result)
+        try
         {
-            case FileDownloadResult.SuccessfulDownload:
+            _currentDownloadClient =  new FileDownloadClient(_client.HttpClient, DownloadFileName, fullSavePath, 4096);
+            var downloadTask = _currentDownloadClient.StartDownloadAsync();
+            CurrentDownloads.Add(_currentDownloadClient);
+            var result = await downloadTask;
+            CurrentDownloads.Remove(_currentDownloadClient);
+            switch (result)
             {
-                DownloadedFiles.Add(_currentDownloadClient);
-                break;
+                case FileDownloadResult.SuccessfulDownload:
+                {
+                    DownloadedFiles.Add(_currentDownloadClient);
+                    break;
+                }
+                case FileDownloadResult.FileNotFound:
+                {
+                    CanceledDownloads.Add(_currentDownloadClient);
+                    MessageBox.Show($"Downloading of the file {_currentDownloadClient.RequestedFileName} has been terminated: no file with such name is available for downloading",
+                        "Download terminated", MessageBoxButton.OK, MessageBoxImage.Error);
+                    break;
+                }
+                case FileDownloadResult.StoppedDownload:
+                {
+                    CanceledDownloads.Add(_currentDownloadClient);
+                    MessageBox.Show($"Downloading of the file {_currentDownloadClient.RequestedFileName} has been terminated: operation was cancelled by user",
+                        "Download terminated", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+                    break;
+                }
             }
-            case FileDownloadResult.FileNotFound:
-            {
-                CanceledDownloads.Add(_currentDownloadClient);
-                MessageBox.Show($"Downloading of the file {_currentDownloadClient.FileName} has been terminated: no file with such name is available for downloading",
-                    "Download terminated", MessageBoxButton.OK, MessageBoxImage.Error);
-                break;
-            }
-            case FileDownloadResult.StoppedDownload:
-            {
-                CanceledDownloads.Add(_currentDownloadClient);
-                MessageBox.Show($"Downloading of the file {_currentDownloadClient.FileName} has been terminated: operation was cancelled by user",
-                    "Download terminated", MessageBoxButton.OK, MessageBoxImage.Exclamation);
-                break;
-            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Download Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -152,6 +155,11 @@ public class MainViewModel : ObservableObject
             }
         }
     }
+
+    private async void ExecuteStopDownloadCommand()
+    {
+        await _currentDownloadClient.StopAsync();
+    }
     
     private void ExecuteSelectSavePathCommand()
     {
@@ -160,6 +168,24 @@ public class MainViewModel : ObservableObject
         if (folderDialog.ShowDialog() == CommonFileDialogResult.Ok)
         {
             SavePath = folderDialog.FileName;
+        }
+    }
+
+    private void ExecuteRenameFileCommand(object? param)
+    {
+        if (param is FileDownloadClient selectedDownloadClient)
+        {
+            var renameWindow = new RenameFileWindow();
+            if (renameWindow.DataContext is RenameWindowViewModel renameFileVm)
+            {
+                renameFileVm.PreRenameFilePath = selectedDownloadClient.SavePath;
+                renameWindow.ShowDialog();
+                if (renameFileVm.RenamingResult)
+                {
+                    DownloadedFiles.FirstOrDefault(f => f.SavePath.Equals(selectedDownloadClient.SavePath))!
+                        .SavePath = renameFileVm.NewFileFullPath;
+                }
+            }
         }
     }
 }

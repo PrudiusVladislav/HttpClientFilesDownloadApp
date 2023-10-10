@@ -11,7 +11,6 @@ public class FilesController: Controller
     {
     }
     
-    //[AcceptVerbs(new[] {"GET", "HEAD"})]
     [HttpGet("{fileName}")]
     [HttpHead("{fileName}")]
     public IActionResult DownloadFile(string fileName)
