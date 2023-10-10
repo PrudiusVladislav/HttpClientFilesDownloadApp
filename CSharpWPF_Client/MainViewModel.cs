@@ -69,10 +69,7 @@ public class MainViewModel : ObservableObject
         {
             ExecuteDownloadCommand();
         }, o => !(string.IsNullOrWhiteSpace(DownloadFileName) || string.IsNullOrWhiteSpace(SavePath) || !Directory.Exists(SavePath) || CurrentDownloads.Count > 0));
-        SelectSavePathCommand = new RelayCommand((action) =>
-        {
-            ExecuteSelectSavePathCommand();
-        }, o => CurrentDownloads.Count == 0);
+        SelectSavePathCommand = new RelayCommand(ExecuteSelectSavePathCommand, o => CurrentDownloads.Count == 0);
         PauseResumeCommand = new RelayCommand((action) =>
         {
             ExecutePauseResumeCommand();
@@ -82,6 +79,8 @@ public class MainViewModel : ObservableObject
             ExecuteStopDownloadCommand();
         }, o => CurrentDownloads.Count > 0);
         RenameFileCommand = new RelayCommand(ExecuteRenameFileCommand, o => true);
+        DeleteFileCommand = new RelayCommand(ExecuteDeleteFileCommand, o => true);
+        RelocateFileCommand = new RelayCommand(ExecuteRelocateFileCommand, o => true);
     }
     
     
@@ -137,7 +136,7 @@ public class MainViewModel : ObservableObject
         }
     }
 
-    private async void ExecutePauseResumeCommand()
+    private void ExecutePauseResumeCommand()
     {
         switch (_currentDownloadClient.DownloadState)
         {
@@ -159,9 +158,10 @@ public class MainViewModel : ObservableObject
     private async void ExecuteStopDownloadCommand()
     {
         await _currentDownloadClient.StopAsync();
+        PauseResumeButtonText = "Pause";
     }
     
-    private void ExecuteSelectSavePathCommand()
+    private void ExecuteSelectSavePathCommand(object? param)
     {
         var folderDialog = new CommonOpenFileDialog();
         folderDialog.IsFolderPicker = true;
@@ -184,6 +184,72 @@ public class MainViewModel : ObservableObject
                 {
                     DownloadedFiles.FirstOrDefault(f => f.SavePath.Equals(selectedDownloadClient.SavePath))!
                         .SavePath = renameFileVm.NewFileFullPath;
+                }
+            }
+        }
+    }
+
+    private void ExecuteDeleteFileCommand(object? param)
+    {
+        if (param is FileDownloadClient selectedDownloadClient)
+        {
+            try
+            {
+                File.Delete(selectedDownloadClient.SavePath);
+                DownloadedFiles.Remove(selectedDownloadClient);
+                MessageBox.Show(
+                    $"File with name {selectedDownloadClient.RequestedFileName} has been successfully deleted.",
+                    "File deleted", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error while deleting file", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            
+        }
+    }
+
+    private void ExecuteRelocateFileCommand(object? param)
+    {
+        if (param is FileDownloadClient selectedDownloadClient)
+        {
+            var folderDialog = new CommonOpenFileDialog();
+            folderDialog.IsFolderPicker = true;
+            if (folderDialog.ShowDialog() == CommonFileDialogResult.Ok)
+            {
+                var newFullPath =
+                    Path.Combine(folderDialog.FileName, selectedDownloadClient.DownloadedFileName);
+                
+                if (Path.Exists(newFullPath))
+                {
+                    var mboxResult = MessageBox.Show("File with such name already exists in the directory you selected.\n" +
+                                                     "Do you want to overwrite content of the existing file?",
+                        "Invalid file name", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+                    if (mboxResult == MessageBoxResult.Cancel)
+                        return;
+                    if (mboxResult == MessageBoxResult.No)
+                    {
+                        var counter = 1;
+                        var fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(selectedDownloadClient.DownloadedFileName);
+                        var fileExtension = System.IO.Path.GetExtension(selectedDownloadClient.DownloadedFileName);
+                
+                        while (File.Exists(newFullPath))
+                        {
+                            newFullPath = System.IO.Path.Combine(folderDialog.FileName, $"{fileNameWithoutExtension} ({counter}){fileExtension}");
+                            counter++;
+                        }
+                    }
+                    
+                }
+                try
+                {
+                    File.Move(selectedDownloadClient.SavePath, newFullPath, true);
+                    selectedDownloadClient.SavePath = newFullPath;
+                    MessageBox.Show("File has been relocated successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message, "Error while relocating file", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
